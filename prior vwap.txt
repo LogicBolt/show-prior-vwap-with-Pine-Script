@@ -1,0 +1,52 @@
+//@version=5
+indicator(title="Shifted Prior Day VWAP with Pivot Points", shorttitle="PD VWAP", overlay=true)
+
+openses = timestamp("10 Jul 2024 00:00")      
+closeses   = timestamp("11 Jul 2024 00:00") 
+
+timeses(tm) =>
+    var int _bar = na 
+    if time_close[1] <= tm and time >= tm
+        _bar := bar_index
+    _bar   
+beginning   = timeses(openses)
+end  = timeses(closeses)
+muchbars  = end - beginning
+
+// Inputs for settings
+// shiftN = input.int(1, 'Shift N bars', minval = -500, maxval = 500) // input offset
+lookbackDays = input.int(1, title="Lookback Days", minval=1, maxval=10)
+
+
+anchor = timeframe.change('D') // when to reset anchor
+avwapD = ta.vwap(open, anchor) // calculate AVWAP
+
+currentYear = year(timenow)
+currentMonth = month(timenow)
+currentDay = dayofmonth(timenow)
+currentHour = hour(timenow)
+currentMinute = minute(timenow)
+currentSecond = second(timenow)
+
+// var startTime = timestamp(year(timenow), month(timenow), dayofmonth(timenow) - lookbackDays + 1, 0, 0)
+// var currentTimestamp = timestamp(currentYear, currentMonth, currentDay, currentHour, currentMinute, currentSecond)
+var startTime = timestamp(year(timenow), month(timenow), dayofmonth(timenow) - lookbackDays - 1, 0, 00)
+var endTime = timestamp(year(timenow), month(timenow), dayofmonth(timenow), 11, 59)
+inRange = (time >= startTime) and (time < endTime)
+
+// Plot shifted VWAP
+plot(inRange ? avwapD : na, title="Shifted VWAP", color=color.rgb(255, 0, 0), linewidth=1, offset=muchbars)
+
+showPivots = input.bool(defval=false, title='Show Tomorrow\'s Pivot Points', group = '═════════ Pivot Points ═════════')
+timmeframe = "1W"
+t = ticker.new(syminfo.prefix, syminfo.ticker, session.regular)
+previous_high  = request.security(t,timmeframe, high[1], barmerge.gaps_off, barmerge.lookahead_on)
+previous_low   = request.security(t,timmeframe, low[1], barmerge.gaps_off, barmerge.lookahead_on)
+previous_close = request.security(t,timmeframe, close[1], barmerge.gaps_off, barmerge.lookahead_on)
+pp = (previous_high + previous_low + previous_close) / 3
+r5 = previous_high + 4 * (pp - previous_low) 
+s5 = previous_low - 4 * (previous_high - pp)
+plot_r5 = showPivots ? r5 : na
+plot_s5 = showPivots ? s5 : na
+plot(plot_r5, color=color.red, linewidth=1, title='R5')
+plot(plot_s5, color=color.green, linewidth=1, title='S5')
